@@ -1,0 +1,23 @@
+name: Package main branch
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Build source ZIP
+        run: |
+          git archive --format=zip --output="$RUNNER_TEMP/placeflow-ai-main.zip" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: placeflow-ai-main
+          path: ${{ runner.temp }}/placeflow-ai-main.zip
+          if-no-files-found: error
+          retention-days: 7

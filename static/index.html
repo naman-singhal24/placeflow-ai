@@ -104,6 +104,10 @@
             class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
             <span>Coordinator Exports</span>
           </button>
+          <button onclick="switchTab('disruptions')" id="tab-btn-disruptions"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
+            <span>Live Disruption Re-Router</span>
+          </button>
           <!-- HR Tab -->
           <button onclick="switchTab('hr')" id="tab-btn-hr"
             class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
@@ -625,6 +629,52 @@
     </section>
 
     <!-- ==================== HR PORTAL (HR-ONLY) ==================== -->
+        <!-- ==================== LIVE DISRUPTION RE-ROUTER ==================== -->
+    <section id="tab-disruptions" class="hidden space-y-6">
+      <div class="rounded-2xl border border-amber-300/50 dark:border-amber-800/60 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-4">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div class="text-[10px] font-mono tracking-widest text-amber-600 dark:text-amber-400">CAMPUS INCIDENT SIMULATOR · LIVE</div>
+            <h2 class="text-xl font-bold mt-1">Last-Minute Campus Chaos Re-Router</h2>
+            <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 max-w-2xl">Trigger a real-time campus disruption. PlaceFlow identifies the candidates inside the changed eligibility boundary, recomputes only those records, and issues stakeholder-specific before/after alerts.</p>
+          </div>
+          <span class="px-2 py-1 rounded-lg border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-700 dark:text-emerald-400">SELECTIVE RECOMPUTE</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="text-xs space-y-1">Placement drive
+            <select id="disruption-jd" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm"></select>
+          </label>
+          <label class="text-xs space-y-1">Disruption type
+            <select id="disruption-type" onchange="toggleDisruptionFields()" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm">
+              <option value="eligibility_cutoff">Eligibility cutoff changed</option>
+              <option value="cancellation">Placement drive cancelled</option>
+              <option value="resource_unavailable">Placement resource unavailable (venue / lab / slot)</option>
+            </select>
+          </label>
+          <label id="disruption-cutoff-wrap" class="text-xs space-y-1">New minimum CGPA (0–10)
+            <input id="disruption-cutoff" type="number" min="0" max="10" step="0.1" value="8.0" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm"/>
+          </label>
+          <label class="text-xs space-y-1">Incident note
+            <input id="disruption-details" placeholder="e.g. Recruiter updated eligibility 20 minutes before shortlist lock" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm"/>
+          </label>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="triggerCampusDisruption()" id="disruption-trigger-btn" class="interactive-btn rounded-xl bg-[#F04E23] hover:bg-[#D9421A] text-white px-5 py-2.5 text-xs font-semibold">⚡ Trigger disruption &amp; re-route</button>
+          <button onclick="loadDisruptionPanel()" class="interactive-btn rounded-xl border border-stone-200 dark:border-zinc-700 px-4 py-2.5 text-xs">Refresh event log</button>
+        </div>
+        <div id="disruption-result" class="space-y-3"></div>
+      </div>
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
+        <div class="flex items-center justify-between gap-2"><h3 class="font-semibold text-sm">Targeted stakeholder alerts</h3><span id="disruption-alert-count" class="text-[11px] font-mono text-stone-500">0 alerts</span></div>
+        <div id="disruption-alerts" class="space-y-2 text-xs"><p class="text-stone-500">No disruption alerts yet.</p></div>
+      </div>
+      <div class="rounded-2xl border border-violet-200 dark:border-violet-900 bg-white dark:bg-zinc-900 p-5 space-y-3">
+        <div class="flex items-center justify-between gap-2 flex-wrap"><div><h3 class="text-sm font-semibold">Decision appeals &amp; override review</h3><p class="text-xs text-stone-500">Review student flags, request information, accept/reject appeals or record a reasoned human override.</p></div><button onclick="loadAppealReview()" class="interactive-btn rounded-lg border border-stone-300 dark:border-zinc-700 px-3 py-2 text-xs">Refresh</button></div>
+        <div id="college-appeals-list" class="space-y-3 text-xs"><p class="text-stone-500">No appeals loaded.</p></div>
+        <div class="border-t border-stone-200 dark:border-zinc-700 pt-3"><h4 class="font-semibold text-xs mb-1">Audit trail</h4><div id="college-audit-list" class="space-y-1 text-[11px] text-stone-500"></div></div>
+      </div>
+    </section>
+
     <section id="tab-hr" class="hidden space-y-6">
       <!-- HR KPI Summary Strip -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -741,6 +791,16 @@
 
         <div id="student-erp-banner"></div>
         <div id="student-portal-body"></div>
+        <div class="mt-4 rounded-xl border border-blue-200 dark:border-blue-900 p-4 space-y-3">
+          <div><h3 class="text-sm font-semibold">Why did PlaceFlow decide this?</h3><p class="text-xs text-stone-500">Inspect the rules and evidence behind your latest automated placement outcome.</p></div>
+          <div id="student-decision-explanation" class="text-xs space-y-2"><p class="text-stone-500">Your decision explanation will appear after screening.</p></div>
+          <div class="border-t border-stone-200 dark:border-zinc-700 pt-3 space-y-2"><label class="text-xs font-semibold" for="student-appeal-reason">Appeal / flag this decision</label><textarea id="student-appeal-reason" maxlength="1000" rows="3" placeholder="Briefly explain what you believe is incorrect and what evidence should be reviewed..." class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 p-3 text-xs"></textarea><button onclick="submitStudentAppeal()" class="interactive-btn rounded-lg bg-blue-600 text-white px-4 py-2 text-xs font-semibold">Submit appeal for review</button></div>
+          <div id="student-appeals-list" class="space-y-2 text-xs"></div>
+          <div class="border-t border-stone-200 dark:border-zinc-700 pt-3 space-y-2">
+            <h4 class="text-xs font-semibold">Your decision &amp; appeal history</h4>
+            <div id="student-audit-list" class="space-y-1 text-[11px] text-stone-500"><p>Loading your audit history…</p></div>
+          </div>
+        </div>
       </div>
 
       <!-- Opportunities + Prepare for a Specific JD -->
@@ -914,6 +974,98 @@
       return fetch(url, Object.assign({}, options, { headers }));
     }
 
+
+    function toggleDisruptionFields() {
+      const isCutoff = document.getElementById("disruption-type").value === "eligibility_cutoff";
+      document.getElementById("disruption-cutoff-wrap").classList.toggle("hidden", !isCutoff);
+    }
+
+    async function loadDisruptionPanel() {
+      const jdRes = await apiFetch("/api/jds");
+      const jdData = await jdRes.json();
+      const select = document.getElementById("disruption-jd");
+      const current = select.value;
+      select.innerHTML = (jdData.jds || []).filter(j => j.isActive !== false).map(j =>
+        '<option value="' + escapeHtml(j.id) + '">' + escapeHtml(j.company + " · " + j.role + " · cutoff " + j.minCgpa) + '</option>'
+      ).join("");
+      if (current && [...select.options].some(o => o.value === current)) select.value = current;
+      toggleDisruptionFields();
+
+      const [eventsRes, alertsRes] = await Promise.all([
+        apiFetch("/api/college/disruptions"), apiFetch("/api/notifications")
+      ]);
+      const eventsData = await eventsRes.json();
+      const alertsData = await alertsRes.json();
+      const events = eventsData.events || [];
+      const alerts = alertsData.notifications || [];
+      document.getElementById("disruption-alert-count").textContent = alerts.length + " alert(s)";
+      document.getElementById("disruption-alerts").innerHTML = alerts.length ? alerts.slice().reverse().map(n => `
+        <div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div><div class="font-semibold">${escapeHtml(n.studentName)}</div><div class="text-stone-500">${escapeHtml(n.recipient)}</div></div>
+          <div><div class="text-rose-600 dark:text-rose-400">BEFORE · ${escapeHtml(n.before.routeLabel || n.before.route || "—")}</div><div class="text-emerald-600 dark:text-emerald-400">AFTER · ${escapeHtml(n.after.routeLabel || n.after.route || "—")}</div></div>
+          <div class="text-stone-500">${escapeHtml(n.title)}<div class="mt-1">${escapeHtml(n.message)}</div></div>
+        </div>`).join("") : '<p class="text-stone-500">No disruption alerts yet. Trigger a campus event to generate targeted diffs.</p>';
+      if (!document.getElementById("disruption-result").innerHTML.trim()) {
+        document.getElementById("disruption-result").innerHTML = events.length ? events.slice().reverse().map(e =>
+          '<div class="text-xs border-t border-stone-200 dark:border-zinc-700 pt-3"><strong>' + escapeHtml(e.title) +
+          '</strong> · ' + e.recomputedCount + ' recomputed · ' + e.affectedCount + ' alerts · ' + escapeHtml(e.createdAt) + '</div>'
+        ).join("") : '<p class="text-xs text-stone-500">Event log is empty.</p>';
+      }
+    }
+
+    async function triggerCampusDisruption() {
+      const btn = document.getElementById("disruption-trigger-btn");
+      const type = document.getElementById("disruption-type").value;
+      const body = {
+        jdId: document.getElementById("disruption-jd").value,
+        triggerType: type,
+        newMinCgpa: type === "eligibility_cutoff" ? Number(document.getElementById("disruption-cutoff").value) : null,
+        details: document.getElementById("disruption-details").value.trim()
+      };
+      if (!body.jdId) return toast("Choose a placement drive first.", "error");
+      if (type === "eligibility_cutoff" && (!Number.isFinite(body.newMinCgpa) || body.newMinCgpa < 0 || body.newMinCgpa > 10)) return toast("Enter a CGPA cutoff from 0 to 10.", "error");
+      btn.disabled = true; btn.textContent = "Recomputing impacted records…";
+      try {
+        const res = await apiFetch("/api/college/disruption", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) return toast(data.error || "Disruption failed.", "error");
+        const event = data.event;
+        document.getElementById("disruption-result").innerHTML = `
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Candidate pool</div><div class="text-2xl font-bold">${event.candidatePoolCount}</div></div>
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Recomputed only</div><div class="text-2xl font-bold">${data.recomputedCount}</div></div>
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Changed outcomes</div><div class="text-2xl font-bold">${data.affectedCount}</div></div>
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Unaffected records</div><div class="text-2xl font-bold">${data.unaffectedCount}</div></div>
+          </div>
+          <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">✓ Disruption applied. Only the impacted cohort was recomputed.</div>
+          <div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-4 space-y-3">
+            <div class="text-xs font-semibold">Alternative-drive impact map</div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div class="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3"><div class="text-[10px] text-stone-500">Found an alternative</div><div class="text-xl font-bold text-emerald-700 dark:text-emerald-400">${data.impactSummary?.alternativeFound ?? 0}</div></div>
+              <div class="rounded-lg bg-rose-50 dark:bg-rose-950/30 p-3"><div class="text-[10px] text-stone-500">No eligible alternative</div><div class="text-xl font-bold text-rose-700 dark:text-rose-400">${data.impactSummary?.noAlternative ?? 0}</div></div>
+              <div class="rounded-lg bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Alternative drives checked</div><div class="text-xl font-bold">${event.alternativeDriveCount || 0}</div></div>
+            </div>
+            ${(data.impactSummary?.candidateExplanations || []).map(row => "<div class=\"rounded-lg border border-stone-200 dark:border-zinc-700 p-3 text-xs space-y-2\"><div class=\"font-semibold\">" + escapeHtml(row.studentName) + " · " + (row.alternative ? escapeHtml(row.alternative.company) + " (" + row.alternative.fitPct + "% fit)" : "No eligible alternative") + "</div>" + (row.evaluations || []).map(ev => "<div class=\"flex flex-wrap items-center gap-2 text-stone-500\"><span>" + escapeHtml(ev.company) + " — " + ev.fitPct + "% skill fit</span><span class=\"" + (ev.eligible ? "text-emerald-600" : "text-rose-600") + "\">" + (ev.eligible ? "Eligible" : "Rejected") + "</span><span>CGPA " + (ev.gates.cgpa ? "✓" : "✕") + " · Branch " + (ev.gates.branch ? "✓" : "✕") + " · Backlogs " + (ev.gates.backlogs ? "✓" : "✕") + "</span></div>" + (ev.missingSkills?.length ? "<div class=\"text-[11px]\">Skill gaps: " + ev.missingSkills.map(escapeHtml).join(", ") + "</div>" : "")).join("") + "</div>").join("")}
+          </div>
+          ${(data.diffs || []).map(d => `
+            <div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+              <div><strong>${escapeHtml(d.studentName)}</strong><div class="text-stone-500">${escapeHtml(d.studentEmail)}</div></div>
+              <div><div class="text-rose-600 dark:text-rose-400">BEFORE · ${escapeHtml(d.before.routeLabel || d.before.route || "—")}</div><div class="text-emerald-600 dark:text-emerald-400">AFTER · ${escapeHtml(d.after.routeLabel || d.after.route || "—")}</div></div>
+              <div class="text-stone-500">${escapeHtml(d.after.reason || event.reason)}</div>
+            </div>`).join("") || '<p class="text-xs text-stone-500">No candidate outcome changed for this trigger.</p>'}
+        `;
+        toast("Campus disruption processed: " + data.recomputedCount + " record(s) recomputed.");
+        await Promise.all([loadCollegeResults(), loadCollegeAnalytics()]);
+        await loadDisruptionPanel();
+      } catch (err) {
+        toast("Could not process disruption: " + err.message, "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "⚡ Trigger disruption & re-route";
+      }
+    }
+
     async function init() {
       applySavedTheme();
       setupDropzone();
@@ -1073,11 +1225,12 @@
       document.getElementById("tab-btn-router").classList.toggle("hidden", !isCollege);
       document.getElementById("tab-btn-analytics").classList.toggle("hidden", !isCollege);
       document.getElementById("tab-btn-actions").classList.toggle("hidden", !isCollege);
+      document.getElementById("tab-btn-disruptions").classList.toggle("hidden", !isCollege);
       document.getElementById("tab-btn-hr").classList.toggle("hidden", !isHr);
       document.getElementById("tab-btn-student").classList.toggle("hidden", !isStudent);
 
       if (!isSignedIn) {
-        ["router", "analytics", "actions", "hr", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
+        ["router", "analytics", "actions", "disruptions", "hr", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
         return;
       }
       if (isCollege) {
@@ -1777,6 +1930,63 @@
     }
 
     // ==================== STUDENT PORTAL + UPLOAD + OPPORTUNITIES + PROCTORED TEST ====================
+    function renderStudentDecisionExplanation(item) {
+      const el = document.getElementById("student-decision-explanation");
+      if (!el) return;
+      const d = item?.decisionExplanation || {};
+      const rules = d.rules || [];
+      el.innerHTML = '<div class="font-semibold">Outcome: ' + escapeHtml(d.outcome || item?.routing?.routeLabel || item?.routing?.route || "Pending") + '</div><p>' + escapeHtml(d.reason || item?.routing?.verdictReason || "No explanation available yet.") + '</p>' + (rules.length ? '<div class="grid grid-cols-1 md:grid-cols-3 gap-2">' + rules.map(r => '<div class="rounded-lg p-2 border border-stone-200 dark:border-zinc-700"><div class="font-semibold">' + escapeHtml(r.name) + ' · ' + (r.passed ? 'PASS' : 'FAIL') + '</div><div>Actual: ' + escapeHtml(r.actual) + '</div><div>Rule: ' + escapeHtml(r.constraint) + '</div></div>').join("") + '</div>' : '') + '<div>Skill fit: ' + escapeHtml(d.skillFitPct ?? item?.routing?.matchPct ?? "—") + '% · Matched: ' + escapeHtml((d.matchedSkills || item?.routing?.matchedMustHave || []).join(", ") || "—") + ' · Missing: ' + escapeHtml((d.missingSkills || item?.routing?.missingMustHave || []).join(", ") || "None") + '</div>';
+    }
+
+    async function loadStudentAppeals() {
+      const res = await apiFetch("/api/appeals"); if (!res.ok) return;
+      const data = await res.json(); const el = document.getElementById("student-appeals-list");
+      if (el) el.innerHTML = (data.appeals || []).map(a => '<div class="rounded-lg border border-stone-200 dark:border-zinc-700 p-2"><strong>' + escapeHtml(a.status) + '</strong> · ' + escapeHtml(a.createdAt) + '<div>' + escapeHtml(a.reason) + '</div><div class="text-stone-500">' + escapeHtml(a.reviewNote || "") + '</div></div>').join("") || '<p class="text-stone-500">No appeals submitted yet.</p>';
+      const auditRes = await apiFetch("/api/audit");
+      if (auditRes.ok) {
+        const auditData = await auditRes.json();
+        const auditEl = document.getElementById("student-audit-list");
+        if (auditEl) auditEl.innerHTML = (auditData.entries || []).slice().reverse().map(e =>
+          '<div class="border-l-2 border-blue-400 pl-2 py-1"><strong>' + escapeHtml(e.action) + '</strong> · ' +
+          escapeHtml(e.timestamp) + '<div>' + escapeHtml(e.fromStatus || "—") + ' → ' +
+          escapeHtml(e.toStatus || "—") + '</div><div>' + escapeHtml(e.details || "") + '</div></div>'
+        ).join("") || '<p>No decision or appeal events recorded yet.</p>';
+      }
+    }
+
+    async function submitStudentAppeal() {
+      const records = state.studentData?.records || []; const item = records[records.length - 1];
+      const reason = document.getElementById("student-appeal-reason").value.trim();
+      if (!item) return toast("There is no placement decision to appeal yet.", "error");
+      if (!reason) return toast("Enter a brief reason for the appeal.", "error");
+      const res = await apiFetch("/api/student/appeal", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({recordId:item.id, reason})});
+      const data = await res.json(); if (!res.ok) return toast(data.error || "Appeal failed.", "error");
+      document.getElementById("student-appeal-reason").value = ""; await loadStudentAppeals(); toast("Appeal submitted to the placement cell.");
+    }
+
+    async function loadAppealReview() {
+      const [aRes, lRes] = await Promise.all([apiFetch("/api/appeals"), apiFetch("/api/audit")]);
+      const aData = await aRes.json(), lData = await lRes.json();
+      const list = document.getElementById("college-appeals-list"), audit = document.getElementById("college-audit-list");
+      if (list) list.innerHTML = (aData.appeals || []).slice().reverse().map(a => '<div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-3 space-y-2"><div class="flex justify-between gap-2"><strong>' + escapeHtml(a.studentName) + ' · ' + escapeHtml(a.status) + '</strong><span>' + escapeHtml(a.createdAt) + '</span></div><p>' + escapeHtml(a.reason) + '</p><p class="text-stone-500">Original outcome: ' + escapeHtml(a.explanation?.outcome || "—") + '</p><div class="flex flex-wrap gap-2"><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'UNDER_REVIEW\')">Start review</button><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'ACCEPTED\')">Accept</button><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'REJECTED\')">Reject</button><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'NEED_INFO\')">Need info</button><button class="border rounded px-2 py-1" onclick="overrideAppeal(\'' + a.id + '\')">Override route</button></div><p class="text-stone-500">' + escapeHtml(a.reviewNote || "") + '</p></div>').join("") || '<p class="text-stone-500">No appeals have been submitted.</p>';
+      if (audit) audit.innerHTML = (lData.entries || []).slice().reverse().map(e => '<div>' + escapeHtml(e.timestamp) + ' · ' + escapeHtml(e.actor) + ' · ' + escapeHtml(e.action) + ' · ' + escapeHtml(e.fromStatus) + ' → ' + escapeHtml(e.toStatus) + '</div>').join("") || "No audit events yet.";
+    }
+
+    async function reviewAppeal(appealId, status) {
+      const note = prompt("Add a short review note (required for traceability):") || ""; if (!note.trim()) return;
+      const res = await apiFetch("/api/college/appeal-review", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({appealId,status,note})});
+      const data = await res.json(); if (!res.ok) return toast(data.error || "Review failed.", "error");
+      await loadAppealReview(); toast("Appeal status updated and audited.");
+    }
+
+    async function overrideAppeal(appealId) {
+      const route = (prompt("Override route: SHORTLISTED, PORTFOLIO_EXCEPTION, UPSKILL_TRACK, or REROUTED") || "").trim().toUpperCase();
+      const note = prompt("Mandatory reason for this human override:") || ""; if (!route || !note.trim()) return;
+      const res = await apiFetch("/api/college/appeal-review", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({appealId,status:"OVERRIDDEN",overrideRoute:route,note})});
+      const data = await res.json(); if (!res.ok) return toast(data.error || "Override failed.", "error");
+      await loadAppealReview(); toast("Human override recorded with original decision preserved.");
+    }
+
     async function loadStudentPortal() {
       const [meRes, jdRes] = await Promise.all([apiFetch("/api/student/me"), fetch("/api/jds")]);
       const data = await meRes.json();
@@ -1792,6 +2002,7 @@
       renderStudentErpBanner(data.erpRecord);
       renderStudentPortalBody();
       renderStudentOpportunities(data.opportunities || []);
+      await loadStudentAppeals();
     }
 
     function handleStudentFilePick(fileList) {
@@ -1909,6 +2120,7 @@
           ${card}
         </div>
       `;
+      renderStudentDecisionExplanation(item);
     }
 
     function renderStudentOpportunities(opps) {
@@ -2178,7 +2390,7 @@
     }
 
     function switchTab(tab) {
-      ["router", "analytics", "actions", "hr", "student"].forEach(t => {
+      ["router", "analytics", "actions", "disruptions", "hr", "student"].forEach(t => {
         document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
         const btn = document.getElementById("tab-btn-" + t);
         if (btn) {
@@ -2188,6 +2400,8 @@
         }
       });
       if (tab === "analytics") loadCollegeAnalytics();
+      if (tab === "disruptions") loadDisruptionPanel();
+      if (tab === "disruptions") loadAppealReview();
     }
 
     function openKeyModal() { document.getElementById("key-modal").classList.remove("hidden"); document.getElementById("key-modal").classList.add("flex"); }
